@@ -3,31 +3,26 @@ from .io import io
 import curses
 
 class ui(io):
-    def handle_OOB(self):
-        line=self.get_line()
-        if line['number']==None:
-            for a in range(line['index'],-1,-1):
-                if self.lines[a]['number']!=None:
-                    break
-                self.move_y(distance=-1)
-        if self.cursor_x>line['width']:
-            self.cursor_x=line['width']
 
     def move_y(self,distance=None,position=None):
+        """Main function responsible for cursor movment along the line axis"""
+        self.logger.warn(f"Move-Y: Y:{self.cursor_y} Position:{position} Distance:{distance} Top Line: {self.top_line}")
         if position!=None:
             if position<0:
                 position=0
             if position>=len(self.lines)-1:
                 position=len(self.lines)-1
                 self.logger.warning("Scroll Move Y paast end")
+            
             # if its within the curent window view.....
-            if position >self.top_line and position <self.top_line+self.height:
+            elif position >=self.top_line and position <self.top_line+self.height:
                 self.logger.warning("Move Y cursor in the window")
                 self.cursor_y=position-self.top_line
             else:
                 self.logger.warning("Scroll Move Y cursor in the window")
             # otherwise scroll
                 self.top_line=position
+                self.cursor_y=0
         elif distance!=None:
             if self.cursor_y+distance>self.height-1:
                 self.logger.error("move y bottom")
@@ -55,6 +50,8 @@ class ui(io):
    
     
     def move_x(self,distance=None,position=None):
+        """Main function responsible for cursor movment along the colum axis"""
+        self.logger.warn(f"Move-X:{self.cursor_x}")
         if position!=None:
             self.cursor_x = position   
             self.target_cursor_x=self.cursor_x
@@ -98,14 +95,17 @@ class ui(io):
 
 
     def draw_border(self):
+        """Draw a border arround our window"""
         self.buffer.border(0)
 
     def display_text(self):
+        """Blit formated text to screen"""
         wrapped_text = self.wrap_text()
         for idx, line in enumerate(wrapped_text[self.top_line:self.top_line + self.height]):
             self.buffer.addstr(idx + 1, 5, line[:self.width])  # Adjust for line numbers
 
     def calcualte_page(self):
+        """Builds a precomputed array with information for every line of text. This is the main data object"""
         try:
             self.lines=[]
             line=0
@@ -132,38 +132,40 @@ class ui(io):
                             width=text_right-text_left
                             lines.append({'start':text_left,'end':text_right,'number':line,'width':width,'display':display,'y':i,'line_start':screen_line_start,'mid':0,'index':index})
                             # if this is the line the cursor is on and we are at the end, insert a blank line
-                            if index==self.top_line+self.cursor_y and width==self.width and text_length<=self.width:
-                                self.temp_line=index
-
-                            if self.temp_line==index:
+                            text_length -= self.width
+                            
+                            if text_length==0:
                                 index +=1
                                 screen_line +=1
-                                lines.append({'start':text_right,'end':text_right,'number':line,'width':0,'display':'','y':i,'line_start':screen_line_start,'CURSOR':0,'index':index})
+                                lines.append({'start':text_right,'end':text_right,'number':line,'width':0,'display':'','y':i,'line_start':screen_line_start,'temp_line':0,'index':index})
                                 self.logger.warning("Cursor new line")
                             text_left+=self.width
-                            text_length -= self.width
                             self.last_screen_line=screen_line
                             screen_line +=1
                             index+=1
                     for a in range(len(lines)):
                         lines[a]['line_end']=screen_line-1
+                    self.last_line=line
                     line=line+1
                     self.lines+=lines
 
                 else:
-                    self.lines.append({'start':None,'end':None,'number':None,'width':0,'display':'','y':i,'line_start':screen_line,'line_end':screen_line,'index':index})
+                    self.lines.append({'start':None,'end':None,'number':None,'width':0,'display':'~','y':i,'line_start':screen_line,'line_end':screen_line,'index':index})
                     index+=1
                     screen_line +=1
-            self.save_to_json("debug.json",self.lines)
+            self.logger.warning(f"last {self.last_screen_line} {self.lines[self.last_screen_line]}")
+            #self.save_to_json("debug.json",self.lines)
         except Exception as ex:
             self.logger.Error("Calculate page:"+ex)
 
     def display_line_numbers(self):
+        """Creates the line number gutter"""
         for i in range(self.height):
-            line_num = f"{self.lines[self.top_line+i]['display']} ".ljust(4)
+            line_num = f"{self.lines[self.top_line+i]['display']} ".rjust(4)
             self.buffer.addstr(i + 1, 1, line_num, curses.color_pair(1))
 
     def display_info(self):
+        """Display info at the bottom of the window, line position etc"""
         line_num=self.cursor_y+self.top_line
         line=self.lines[line_num]
         if line['number']!=None:
@@ -178,6 +180,7 @@ class ui(io):
         self.buffer.addstr(self.max_y - 1, 1, info[:self.max_x - 2])
     
     def wrap_text(self):
+        """Create a word wrapped set of text based of internal text array"""
         wrapped_lines = []
         for line in self.lines:
             if line['number']==None:
@@ -202,8 +205,8 @@ class ui(io):
 
     def move_cursor(self):
         """ Adjusts the cursor position on the screen """
-        screen_y = min(self.cursor_y, self.height) + 1
-        screen_x = min(self.cursor_x, self.width)  + 5
+        screen_y = self.cursor_y + self.window_y
+        screen_x = self.cursor_x + self.window_x
         
         info={"y":screen_y,"x":screen_x}
         self.logger.warning("Cursor Move: "+self.dict_log(info))

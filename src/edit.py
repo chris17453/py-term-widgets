@@ -7,44 +7,34 @@ from .input import input
 class Edit(input):
 
 
-    def run(self):
-        """Main function to start the text editor."""
+    def run(self,stdscr=None):
+        """Main loop which renders ui and preforms imput"""
         try:
-        
+            if stdscr!=None:
+                self.stdscr=stdscr
+                self.configure()
 
-
+            if self.filename:
+                self.open_file(self.filename)
             while True:
 
                 if self.update_screen==True:
-                    self.logger.error("DRAWING")
-
-            
-
-                    self.buffer.clear()  # Clear the buffer for new drawing
-                    self.logger.warn("Calc Main Loop")
-
+                    self.logger.warn("Main Loop")
                     self.calcualte_page()
-                    
-                    #self.handle_OOB()
-                    
+                    self.buffer.clear()  
                     self.draw_border()
                     self.display_line_numbers()
-                    #self.adjust_cursor()
                     self.display_info()
                     self.display_text()
                     self.move_cursor()
 
                     # Refresh the buffer
                     self.buffer.noutrefresh()
-
                     # Copy the contents of the buffer to the standard screen
                     curses.doupdate()
             
                     self.logger.warning("Curses screen update")
-
                     self.update_screen=None
-
-                    #self.scroll_to_cursor()
 
                 # get user input , typing, navigation and  command keys
                 self.handle_input()

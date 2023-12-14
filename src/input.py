@@ -9,7 +9,6 @@ class input(ui):
             """Handles user input in the editor."""
 
             key = self.stdscr.getch()
-            self.temp_line=None
 
             if key == 19:  # Ctrl+S
                 self.logger.warning("Input: CRTRL S")
@@ -19,18 +18,27 @@ class input(ui):
                 exit()
                 #break  # Exit the editor        
                 # 
+            elif key == 27:  # Escape key
+                next_ch = self.stdscr.getch()
+                if next_ch == ord('s') or next_ch == ord('S'):
+                    self.save_file()
             
             elif key == curses.KEY_RESIZE:
                 self.logger.warning("Input: Window Resize")
             # Resize event
                 self.configure()
-
-            #elif key == curses.KEY_PPAGE:
-                #self.move_y(distance=-self.height)
-
-            #elif key == curses.KEY_NPAGE:
-            #    self.move_y(distance=self.height)
-
+            elif key == curses.KEY_PPAGE:
+                self.handle_page_up()
+            elif key == curses.KEY_NPAGE:
+                self.handle_page_down()
+            elif key == 542: # CTRL Home
+                self.handle_top_document()
+            elif key == 537: # CTRL END
+                self.handle_end_document()
+            elif key == 552: # CTRL RIGHT
+                self.handle_skip_left()
+            elif key == 567: # CTRL LEFT
+                self.handle_skip_right()
             elif key == curses.KEY_HOME:
                 self.handle_home()
             elif key == curses.KEY_END:
@@ -50,7 +58,7 @@ class input(ui):
             elif key == 10:  # Enter key
                 self.logger.warning("Input: KEY: Enter")
                 self.handle_enter()
-            elif 0 <= key <= 255:
+            elif 30 <= key <= 255:
                 self.handle_character_input(chr(key))
             elif key==-1:
 #                self.logger.warning("Input: KEY:None")
@@ -149,13 +157,11 @@ class input(ui):
         self.logger.warning("Input: KEY: Backspace")
 
         if self.cursor_x > 0:
-            self.logger.warning("backspace 1")
+            self.logger.warning("Backspace x>0")
+            # backspacing from the middle or end of line (multi or not)
             line=self.get_line()
-            self.logger.warning("backspace 2")
             number=self.get_line_number()
-            self.logger.warning("backspace 3")
             text = self.get_text()
-            self.logger.warning("backspace 4")
             text_len=len(text)
             pos=line['start']+self.cursor_x
             if pos==text_len-1:
@@ -172,26 +178,65 @@ class input(ui):
             else:
                 self.logger.error("BACKSPACE SNAFU")
         else:
-            if self.cursor_y>0:
-                number=self.get_line_number()
-                text=self.text.pop(number)
-                pos=len(self.text[number-1])
-                self.text[number-1]+=text
-                self.calcualte_page()
-                cords=self.get_cords(number-1,pos)
-                if cords!=None:
-                    self.move_x(position=cords['x'])
-                    self.move_y(position=cords['y'])
+            if self.cursor_y+self.top_line>0:
+                self.logger.warning("Backspace y>0")
+                # only pop a line if youre at the beginning of a line (multi or not) and there ia a line above you
+                # lines may be split
+                line=self.get_line()
+                if line['start']==0:
+                    # backspacing frm the start of a line
+                    number=self.get_line_number()
+                    text=self.text.pop(number)
+                    pos=len(self.text[number-1])
+                    self.text[number-1]+=text
+                    self.calcualte_page()
+                    cords=self.get_cords(number-1,pos)
+                    if cords!=None:
+                        self.move_x(position=cords['x'])
+                        self.move_y(position=cords['y'])
+                    else:
+                        self.logger.error("BACKSPACE SNAFU")
                 else:
-                    self.logger.error("BACKSPACE SNAFU")
+                    # backspacing from the start of a multiline that is not the first row 
+                    
+                    
+                    pos=self.get_pos()
+                    if pos!=None:
+                        self.logger.info(f"POS:{pos}")
+                        self.remove_char(pos-1)
+                        self.logger.info(f"POS:{pos}")
+                        number=self.get_line_number()
+                        self.calcualte_page()
+                        self.logger.info(f"POSww:{pos}")
+                        self.logger.info(f"POSee:{pos} {number}")
+                        cords=self.get_cords(number,pos-2)
+                        self.logger.info(f"POSrr:{pos}")
+                        if cords!=None:
+                            self.move_x(position=cords['x'])
+                            self.move_y(position=cords['y'])
+                        else:
+                            self.logger.error("BACKSPACE SNAFU")
+                            
+                            self.logger.error("BACKSPACE Not in case")
+                    else:
+                        self.logger.info(f"POS not found")
 
     def handle_delete(self):
         self.logger.warning("Input: KEY: Delete")
         
         line = self.get_line()
         number=self.get_line_number()
-        self.text[number] = line[:self.cursor_x ] + line[self.cursor_x+1:]
-
+        if self.is_end_of_line()==True:
+            if self.line_number()<self.text_length()-1:
+                self.logger.warning(f"{line} - {number}")
+                # if we are at the end of the line and there is a line below us, pull it up and concat
+                text=self.text.pop(number+1)
+                self.text[number] +=text
+        else:
+            # we are in the middle or beginning of a line, and are removing a character
+            text=self.get_text()
+            pos=line['start']+self.cursor_x
+            self.text[number] = text[:pos ] + text[pos+1:]
                     
     def handle_enter(self):
         try:
@@ -229,3 +274,120 @@ class input(ui):
         except Exception as e:
             # Log the error
             self.logger.error("An error occurred: %s", str(e))
+
+    def handle_skip_left(self):
+        """Move the cursor left 1 word to the beginning """
+        try:
+            cur_pos=self.get_pos()
+            if cur_pos==None:
+                return None
+            pos=self.find_word_position(-1)
+            if cur_pos==pos:
+            # if it didnt move at all go up 1 line top the end and try again
+                number=self.get_line_number()
+                if number>0:
+                    number -=1
+                    line=self.get_previous_line()
+                    self.logger.info(line)
+                else:
+                # already at the top
+                    number=0
+                    pos=0
+
+            else:
+                number=self.get_line_number()
+                
+            cords=self.get_cords(number,pos)
+            
+            if cords!=None:
+                self.logger.warn(f"CORD SAME: NUM:{number} POS: {pos} Cords:{cords}")
+                self.move_x(position=cords['x'])
+                self.move_y(position=cords['y'])
+        except Exception as ex:
+            self.logger.error(f"Skip Left: {ex}")
+
+    def handle_skip_right(self):
+        try:
+            """Move the cursor right 1 word to the end """
+            cur_pos=self.get_pos()
+            pos=self.find_word_position(1)
+
+            if cur_pos==pos:
+            # if it didnt move at all go up 1 line top the end and try again
+                number=self.get_line_number()
+                text_len=self.text_length()
+                if number<text_len-1:
+                    number +=1
+                    pos=0
+                    cords=self.get_cords(number,pos)
+            else:
+                number=self.get_line_number()
+                cords=self.get_cords(number,pos)
+        
+            if cords!=None:
+                self.move_x(position=cords['x'])
+                self.move_y(position=cords['y'])
+        except Exception as ex:
+            self.logger.error(f"Skip Right: {ex}")
+
+    def handle_top_document(self):
+        self.move_x(position=0)
+        self.move_y(position=0)
+
+    def handle_end_document(self):
+        line=self.lines[self.last_screen_line]
+        pos=line['end']
+        if pos<0: 
+             pos=0
+
+        line_len=self.last_screen_line
+        number=line_len-self.height+1
+        
+        if self.top_line<0:
+            self.top_line=0
+        self.move_x(position=pos)
+        self.top_line=number
+        self.move_y(position=self.last_screen_line)
+
+    def handle_page_up(self):
+        # pagination = window height... maybe 1 or 2 less for continuity?
+        if self.cursor_y>0:
+            self.cursor_y=0
+
+        else:
+            self.top_line-=self.height
+            if self.top_line<0:
+                self.top_line=0
+
+    def handle_page_down(self):
+        # first page down brings to botrtom of page
+        # second brings to next page
+        bottom_line=self.height
+        for index in range(self.height-1,-1,-1):
+            line=self.lines[self.top_line+index]
+            if line['end'] is not None:
+                bottom_line=index
+                break
+
+        
+        if self.cursor_y<bottom_line:
+            self.cursor_y=bottom_line
+        else:
+            self.top_line+=self.height
+            line_len=self.last_screen_line
+            self.logger.warning(f"line len: {line_len} height: {self.height} top:{self.top_line}")
+            if self.top_line+self.height>=line_len:
+                self.top_line=line_len-self.height+1
+            
+            if self.top_line<0:
+                self.top_line=0
+
+        
+
+
+
+
+
+            
+
+
