@@ -17,4 +17,4 @@ a text input box for python
 
 ## demo
 
-[py-textbox](assets/beta-demo.gif)
+![py-textbox](assets/beta-demo.gif)
