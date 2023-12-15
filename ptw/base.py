@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.DEBUG,
 
 
 class EditBASE:
-    def __init__(self, stdscr,filename=None,width=None, height=None):
+    def __init__(self, stdscr,filename=None,width=None, height=None,x=0,y=0):
         # Create a logger instance
         self.logger = logging.getLogger('termy')
 
@@ -17,6 +17,8 @@ class EditBASE:
         self.filename = filename
         self.text=['']
 
+        self.stdscn_x=x
+        self.stdscn_y=y
         self.window_x=5
         self.window_y=1
         self.window_width=width
@@ -33,7 +35,9 @@ class EditBASE:
         self.stdscr.keypad(True)  # Enable special keys to be captured
         self.stdscr.nodelay(True)
         self.stdscr.timeout(100)  # Wait 100ms for input
-
+        if self.filename:
+           self.open_file(self.filename)
+            
         self.configure()
 
 
@@ -63,7 +67,7 @@ class EditBASE:
         self.stdscr.clear()
         self.stdscr.refresh()    
         if self.buffer==None:
-            self.buffer = curses.newwin(self.max_y, self.max_x, 0, 0)
+            self.buffer = curses.newwin(self.max_y, self.max_x, self.stdscn_x, self.stdscn_y)
         else:
             self.buffer.resize(self.max_y,self.max_x)
         

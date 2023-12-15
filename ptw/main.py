@@ -1,5 +1,4 @@
 import curses
-import logging
 from .edit import Edit
 
 
