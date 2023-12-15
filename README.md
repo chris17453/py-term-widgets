@@ -1,6 +1,10 @@
-# py-textbox
+# py-term-widgets
 
-a text input box for python
+- ptw
+
+## Editor
+
+- a text input box for python
 
 ## Supports
 
@@ -15,6 +19,16 @@ a text input box for python
 - line numbers which span split lines
 - status bar with line cursor, line number, position and lenght information
 
+## Graph
+
+- left to right
+- top to bottom
+- inversion
+- time series
+- color layouts
+- character mapping
+
 ## demo
 
 ![py-textbox](assets/beta-demo.gif)
+
