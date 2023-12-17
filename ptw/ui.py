@@ -61,7 +61,8 @@ class ui(io):
                     self.cursor_x +=distance
                     if self.cursor_x<0:
                         end=self.get_previous_line()
-                        if end['width']==None:
+                        
+                        if end is None or end['width']==None:
                             self.cursor_x=0
                         else:
                             line=self.get_line()
@@ -93,7 +94,17 @@ class ui(io):
         
             self.target_cursor_x=self.cursor_x
 
-
+    def clear_block(self, left,top, width, height,color):
+        """Clear a block area on the screen."""
+        block=" "*width
+        self.logger.info(f"{len(block)}")
+        try:
+            for y in range(top, top + height):
+        
+                self.buffer.addstr(y, left,block,color)
+        except curses.error:
+            pass
+    
     def draw_border(self):
         """Draw a border arround our window"""
         self.buffer.border(0)
@@ -101,8 +112,19 @@ class ui(io):
     def display_text(self):
         """Blit formated text to screen"""
         wrapped_text = self.wrap_text()
+
+        if self.active:
+            color=self.colors['ACTIVE_TEXT']
+        else:
+            color=self.colors['INACTIVE_TEXT']
+
+        self.clear_block(self.elements['text'].left, self.elements['text'].top, self.elements['text'].width,self.elements['text'].height,color)
         for idx, line in enumerate(wrapped_text[self.top_line:self.top_line + self.height]):
-            self.buffer.addstr(idx + 1, 5, line[:self.width])  # Adjust for line numbers
+            self.buffer.addstr(idx + self.elements['text'].top, 
+                               self.elements['text'].left, 
+                               line[:self.width],
+                               color)  # Adjust for line numbers
+
 
     def calcualte_page(self):
         """Builds a precomputed array with information for every line of text. This is the main data object"""
@@ -160,9 +182,12 @@ class ui(io):
 
     def display_line_numbers(self):
         """Creates the line number gutter"""
+        self.logger.warn(f"Drawing Line Numbers {self.height}")
         for i in range(self.height):
             line_num = f"{self.lines[self.top_line+i]['display']} ".rjust(4)
-            self.buffer.addstr(i + 1, 1, line_num, curses.color_pair(1))
+            self.buffer.addstr(i + self.elements['line_numbers'].top, 
+                                self.elements['line_numbers'].left, 
+                                line_num, self.colors['LINE_NUMBERS'])
 
     def display_info(self):
         """Display info at the bottom of the window, line position etc"""
@@ -177,8 +202,11 @@ class ui(io):
             line_info=""
 
         info = f"X: {self.cursor_x+1}, Y: {self.cursor_y+1} /"+line_info
-        self.buffer.addstr(self.max_y - 1, 1, info[:self.max_x - 2])
-    
+        self.buffer.addstr(self.elements['info'].top, 
+                           self.elements['info'].left, 
+                           info[:self.max_x - 2],
+                           self.colors['INFO'])
+        
     def wrap_text(self):
         """Create a word wrapped set of text based of internal text array"""
         wrapped_lines = []
@@ -203,14 +231,21 @@ class ui(io):
         elif self.cursor_y >= self.top_line + self.height:
             self.top_line = self.cursor_y - self.height+ 3
 
+
     def move_cursor(self):
         """ Adjusts the cursor position on the screen """
-        screen_y = self.cursor_y + self.window_y
-        screen_x = self.cursor_x + self.window_x
+        screen_y = self.cursor_y + self.padding['top']
+        screen_x = self.cursor_x + self.padding['left']
         
+        
+        y,x=self.buffer.getyx()
+
+        if y==screen_y and x==screen_x:
+            return
+
         info={"y":screen_y,"x":screen_x}
         self.logger.warning("Cursor Move: "+self.dict_log(info))
-        
         self.buffer.move(screen_y, screen_x)
+    
 
     

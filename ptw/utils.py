@@ -117,6 +117,10 @@ class utils(EditBASE):
         """Returns the curent line number"""
         return self.top_line+self.cursor_y
     
+    def screen_lines_length(self):
+        """Returns the total of calculated lines"""
+        return len(self.lines)
+    
     def text_length(self):
         """Returns the lenth of the text array"""
         return len(self.text)

@@ -5,25 +5,13 @@ import curses
 from .ui import ui
 
 class input(ui):
-    def handle_input(self):
+    def handle_input(self,key):
             """Handles user input in the editor."""
 
-            key = self.stdscr.getch()
 
-            if key == 19:  # Ctrl+S
-                self.logger.warning("Input: CRTRL S")
-                self.save_file()
-            elif key == 24:  # Ctrl+X
-                self.logger.warning("Input: CTRL X")
-                exit()
-                #break  # Exit the editor        
-                # 
-            elif key == 27:  # Escape key
-                next_ch = self.stdscr.getch()
-                if next_ch == ord('s') or next_ch == ord('S'):
-                    self.save_file()
-            
-            elif key == curses.KEY_RESIZE:
+            ## movement commands
+
+            if key == curses.KEY_RESIZE:
                 self.logger.warning("Input: Window Resize")
             # Resize event
                 self.configure()
@@ -51,6 +39,25 @@ class input(ui):
                 self.handle_left()
             elif key == curses.KEY_RIGHT:
                 self.handle_right()
+            elif key == 24:  # Ctrl+X
+                self.logger.warning("Input: CTRL X")
+                exit()
+                #break  # Exit the editor        
+            elif self.read_only:
+                return
+
+
+            ## editable commands
+
+            elif key == 19:  # Ctrl+S
+                self.logger.warning("Input: CRTRL S")
+                self.save_file()
+                # 
+            elif key == 27:  # Escape key
+                next_ch = self.stdscr.getch()
+                if next_ch == ord('s') or next_ch == ord('S'):
+                    self.save_file()
+            
             elif key == curses.KEY_DC:
                 self.handle_delete()
             elif key == curses.KEY_BACKSPACE :
@@ -157,7 +164,6 @@ class input(ui):
         self.logger.warning("Input: KEY: Backspace")
 
         if self.cursor_x > 0:
-            self.logger.warning("Backspace x>0")
             # backspacing from the middle or end of line (multi or not)
             line=self.get_line()
             number=self.get_line_number()
@@ -165,10 +171,8 @@ class input(ui):
             text_len=len(text)
             pos=line['start']+self.cursor_x
             if pos==text_len-1:
-                self.logger.warning("backspace gap")
                 self.text[number] = text[:pos - 1] 
             else:
-                self.logger.warning("backspace mid")
                 self.text[number] = text[:pos - 1] + text[pos:]
             self.calcualte_page()
             cords=self.get_cords(number,pos-1)
@@ -179,7 +183,6 @@ class input(ui):
                 self.logger.error("BACKSPACE SNAFU")
         else:
             if self.cursor_y+self.top_line>0:
-                self.logger.warning("Backspace y>0")
                 # only pop a line if youre at the beginning of a line (multi or not) and there ia a line above you
                 # lines may be split
                 line=self.get_line()
@@ -202,15 +205,10 @@ class input(ui):
                     
                     pos=self.get_pos()
                     if pos!=None:
-                        self.logger.info(f"POS:{pos}")
                         self.remove_char(pos-1)
-                        self.logger.info(f"POS:{pos}")
                         number=self.get_line_number()
                         self.calcualte_page()
-                        self.logger.info(f"POSww:{pos}")
-                        self.logger.info(f"POSee:{pos} {number}")
                         cords=self.get_cords(number,pos-2)
-                        self.logger.info(f"POSrr:{pos}")
                         if cords!=None:
                             self.move_x(position=cords['x'])
                             self.move_y(position=cords['y'])
@@ -226,9 +224,12 @@ class input(ui):
         
         line = self.get_line()
         number=self.get_line_number()
+        total_screen_lines=self.screen_lines_length()-1
+        screen_line_number=self.line_number()
+        
         if self.is_end_of_line()==True:
-            if self.line_number()<self.text_length()-1:
-                self.logger.warning(f"{line} - {number}")
+            if screen_line_number<self.last_screen_line:
+                self.logger.warning(f"{line} - {number} {total_screen_lines}")
                 # if we are at the end of the line and there is a line below us, pull it up and concat
                 text=self.text.pop(number+1)
                 self.text[number] +=text
