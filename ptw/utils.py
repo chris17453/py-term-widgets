@@ -79,7 +79,7 @@ class utils(EditBASE):
 
     def get_cords(self,line_number,position):
         """Returns the screen cursor position for a given line and character position"""
-        self.logger.warn(f"In Coords")
+        self.logger.warn(f"In Cords")
         results=[]
         for line in self.lines:
             if line['number']==line_number:
@@ -89,11 +89,11 @@ class utils(EditBASE):
                     #    continue
                     y=line['index']
                     x=position-line['start']
-                    self.logger.warning(f"Cords: {x}:{y}")
+                    self.logger.warning(f"Cords: COL: {x}: LINE:{y}")
                     results.append( {'x':x,'y':y} )
         if len(results) >0 :
                 return results[-1]
-        self.logger.warn(f"NO Coords found?")
+        self.logger.warn(f"NO Cords found?")
         return None
 
     def is_end_of_screen_line(self):
@@ -199,13 +199,9 @@ class utils(EditBASE):
             position = self.get_pos()
             if position is None:
                 return None
-            self.logger.info(f"Position-0001:{position}")
-
             current_string = self.get_text()
             special_chars='$%#@!`~=_.+-\*()&^[]<>/?,;:\'"{} \t'
-            self.logger.info(f"Position-11:{position}")
             if direction == -1:  # Search backwards
-                self.logger.info(f"Position-1:{position}")
                 if position==0:
                     return position
 
@@ -224,13 +220,10 @@ class utils(EditBASE):
                 if position==len(current_string)-1:
                     return position
 
-                self.logger.info(f"Position0:{position}")
                 # Skip all contiguous white spaces and special characters
-                self.logger.info(f"Position1:{position}")
                 while position < len(current_string) and current_string[position] in special_chars:
                     position += 1
                 # Find the next space or end of string after a word
-                self.logger.info(f"Position2:{position}")
                 while position < len(current_string) and current_string[position].isalnum() and current_string[position] not in special_chars:
                     position += 1
 

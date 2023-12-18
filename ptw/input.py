@@ -39,12 +39,12 @@ class input(ui):
                 self.handle_left()
             elif key == curses.KEY_RIGHT:
                 self.handle_right()
-            elif key == 24:  # Ctrl+X
-                self.logger.warning("Input: CTRL X")
-                exit()
-                #break  # Exit the editor        
             elif self.read_only:
                 return
+#            elif key==curses.KEY_MOUSE:
+#                self.handle_mouse()
+#            key=-1
+
 
 
             ## editable commands
@@ -134,8 +134,8 @@ class input(ui):
             info={
                 'line':line,
                 'number':line_num,
-                'width':self.width,
-                'height':self.height,
+                'width':self.elements['text'].width,
+                'height':self.elements['text'].height,
                 'x':self.cursor_x,
                 'y':self.cursor_y,
                 'top':self.top_line,
@@ -151,13 +151,11 @@ class input(ui):
             else:
                 # middle
                 self.text[line_num] = text[:x_pos] + char  + text[x_pos:]
-            self.logger.warn("Calc Input")
 
             self.calcualte_page()
             self.move_x(distance=1)
         except Exception as e:
             # Log the error
-            self.logger.warning("Parameters: "+self.dict_log(info))
             self.logger.error("Error in handle_character_input: %s", str(e))
 
     def handle_backspace(self):
@@ -244,10 +242,7 @@ class input(ui):
             current_line = self.get_line()
             number=current_line['number']
             text=self.text[number]
-            self.save_to_json("debug.json",{'lines':self.lines,
-                        'line':current_line,
-                        'number':number,
-                        'width':self.width,'height':self.height,'text':self.text})
+            
             x_pos=current_line['start']+self.cursor_x
             
 
@@ -266,7 +261,6 @@ class input(ui):
 
             new_line = text[x_pos:]
             # needs a refresh
-            self.logger.warn("Calc Enter")
 
             self.calcualte_page()
             self.move_y(distance=1)
@@ -342,7 +336,7 @@ class input(ui):
              pos=0
 
         line_len=self.last_screen_line
-        number=line_len-self.height+1
+        number=line_len-self.elements['text'].height+1
         
         if self.top_line<0:
             self.top_line=0
@@ -356,15 +350,15 @@ class input(ui):
             self.cursor_y=0
 
         else:
-            self.top_line-=self.height
+            self.top_line-=self.elements['text'].height
             if self.top_line<0:
                 self.top_line=0
 
     def handle_page_down(self):
         # first page down brings to botrtom of page
         # second brings to next page
-        bottom_line=self.height
-        for index in range(self.height-1,-1,-1):
+        bottom_line=self.elements['text'].height
+        for index in range(self.elements['text'].height-1,-1,-1):
             line=self.lines[self.top_line+index]
             if line['end'] is not None:
                 bottom_line=index
@@ -374,16 +368,39 @@ class input(ui):
         if self.cursor_y<bottom_line:
             self.cursor_y=bottom_line
         else:
-            self.top_line+=self.height
+            self.top_line+=self.elements['text'].height
             line_len=self.last_screen_line
-            self.logger.warning(f"line len: {line_len} height: {self.height} top:{self.top_line}")
-            if self.top_line+self.height>=line_len:
-                self.top_line=line_len-self.height+1
+            self.logger.warning(f"line len: {line_len} height: {self.elements['text'].height} top:{self.top_line}")
+            if self.top_line+self.elements['text'].height>=line_len:
+                self.top_line=line_len-self.elements['text'].height+1
             
             if self.top_line<0:
                 self.top_line=0
 
         
+    def handle_mouse(self):
+        if self.old_char:
+            # Extract the character
+            char = chr(self.old_char & 0xFF)
+
+            # Extract the attribute (color pair)
+            attr = self.old_char & curses.A_COLOR
+            self.stdscr.addch(self.old_mouse.y,self.old_mouse.x,char,attr)
+            #self.logger.warning(f"--{self.old_char} {char} {attr}")
+
+        
+        self.update_mouse()
+        
+        # record charcter
+        #for instance in self.instances:
+        #    if mouse_x>instance.window.left
+        self.old_char=self.stdscr.inch(self.mouse.y,self.mouse.x)
+        ##self.logger.warning(f"--{self.old_char}")
+        # draw mouse
+        self.stdscr.addch(self.mouse.y,self.mouse.x,"*")
+        self.old_mouse=self.mouse
+        
+        self.stdscr.refresh()
 
 
 

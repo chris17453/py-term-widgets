@@ -2,6 +2,8 @@ import os
 import curses
 import logging
 
+from .element import element
+
 # Configure the logger
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -9,16 +11,27 @@ logging.basicConfig(level=logging.DEBUG,
 
 
 class EditBASE:
-    def __init__(self, stdscr,width=None, height=None,left=0,top=0):
+    def __init__(self, 
+                 name=None,
+                 width=None, 
+                 height=None,
+                 left=0,
+                 top=0,
+                 right=None,
+                 bottom=None):
         # Create a logger instance
         self.logger = logging.getLogger('termy')
-
-        self.stdscr = stdscr
+        self.left=left
+        self.top=top
+        self.right=right
+        self.bottom=bottom
+        self.buffer = None
         self.text=['']
         self.elements={}
-        self.width=0
-        self.height=0
         # inner window positing
+        self.name=name
+        self.window=None
+        self.parent=None
         self.window_x=5
         self.window_y=1
         self.window_width=width
@@ -40,40 +53,10 @@ class EditBASE:
         # screen buffer where all is drawn
         self.buffer=None
             
-        self.max_y, self.max_x = self.stdscr.getmaxyx()
-        self.margin={'left':left,'top':top,'right':0,'bottom':0}
+        
         self.padding={'left':0,'top':0,'right':0,'bottom':0}
 
-        # Define DOS colors
-        dos_colors = [
-            (0, 0, 0),           # 0  Black
-            (0, 0, 700),        # 1  Blue
-            (0, 700, 0),        # 2  Green
-            (0, 700, 700),     # 3  Cyan
-            (700, 0, 0),        # 4  Red
-            (700, 0, 700),     # 5  Magenta
-            (700, 700, 0),     # 6  Brown/Yellow
-            (750, 750, 750),     # 7  Light Gray
-            (500, 500, 500),     # 8  Dark Gray
-            (0, 0, 1000),        # 9  Bright Blue
-            (0, 1000, 0),        # 10 Bright Green
-            (0, 1000, 1000),     # 11 Bright Cyan
-            (1000, 0, 0),        # 12 Bright Red
-            (1000, 0, 1000),     # 13 Bright Magenta
-            (1000, 1000, 0),     # 14 Bright Yellow
-            (1000, 1000, 1000)   # 15 Bright White
-        ]
-
-        for i, (r, g, b) in enumerate(dos_colors):
-            curses.init_color(i, r, g, b)
-
-        curses.init_pair(1, curses.COLOR_YELLOW, curses.COLOR_WHITE ) 
-        curses.init_pair(2, 0, 7 )  # INFO
-        curses.init_pair(4, 15, 7)  # BACKGROUND
-        curses.init_pair(5, 6, 8 ) # LINE NUMBERS
-        curses.init_pair(6, 15, 1 )  # TEXT
-        curses.init_pair(7, 15, 9 )  # TEXT
-        
+           
         self.colors={}
         self.colors['BACKGROUND']= curses.color_pair(4)
         self.colors['LINE_NUMBERS']= curses.color_pair(5)
@@ -81,154 +64,103 @@ class EditBASE:
         self.colors['INFO']= curses.color_pair(2)
         self.colors['ACTIVE_TEXT']= curses.color_pair(6)
         self.colors['INACTIVE_TEXT']= curses.color_pair(7)
+        self.colors['BUTTON']= curses.color_pair(8)
+    
+    def info(self):
+        info="Class Variables\n"
+        for attr in vars(self):
+            info+=f"{attr} = {getattr(self, attr)}\n"
+        return info
+
+
+
+    def close(self):
+        #if self.buffer:
+        #    self.buffer.endwin()
+        pass
 
     def configure(self):
-        self.width=self.window_width
-        self.height=self.window_height
+        self.logger.warning("Re-configuring Window")
+        # get the base screens dimentions
+        max_y,max_x = self.buffer.getmaxyx()
         
-        if self.window_width!=None:
-            self.max_x=self.window_width
-            self.margin['right']=self.max_x-self.window_width
-            self.logger.info(f"Setting width explicity {self.window_width}")
-        else:
-            self.width=self.max_x
+        # set the width of our screen based on preferences or full screen
+        #if self.window is None or self.window.parent ==None:
+        #w=self.window_width if self.window_width is not None else max_x-self.left
+        #h=self.window_height if self.window_height is not None else max_y-self.top
+        #if self.right and self.right<0:
+        #    w+=self.right
+        #if self.bottom and self.bottom<0:
+        #    h+=self.bottom
+        #else:
+        #self.w=w
+        #self.h=h
+        self.logger.info(self.info())
+        # create the main sizing element
+        self.window=element(name=f"{self.name} Window",
+                            left=self.left,
+                            top=self.top,
+                            right=self.right,
+                            bottom=self.bottom,
+                            width=self.width,
+                            height=self.height,
+                            parent=self.parent)
 
-        if self.window_height!=None:
-            self.max_y=self.window_height
-            self.margin['bottom']=self.max_y-self.window_height
-            self.logger.info(f"Setting height explicity {self.window_height}")
-        else:
-            self.height=self.max_y
-            
-        self.width  -=self.padding['left']+self.padding['right']
-        self.height -=self.padding['top']+self.padding['bottom']
-
-        
+        # create the buffer for writing to the screen
         # if you dont do the following 2 lines, 
         # the screen will intermittantly glitch
         # on screen resize less than original height
-        if self.buffer==None:
-            self.buffer = curses.newwin(self.max_y, self.max_x, self.margin['top'], self.margin['left'])
-        else:
-            self.buffer.resize(self.max_y,self.max_x)
-        self.buffer.scrollok(0)
-    
+
+        self.logger.warn(f"{self.window.info()}")
         self.update_screen=True
 
 
 
-
-
-class element:
-    def __init__(self,name=None,left=None,top=None,right=None,bottom=None,width=None,height=None,parent=None):
-
-        self.base_left=left
-        self.base_top=top
-        self.base_width=width
-        self.base_height=height
-        self.base_bottom=bottom
-        self.base_right=right
-        self.parent=parent
-        self.name=name
-
-        self.left=None
-        self.top=None
-        self.width=None
-        self.height=None
-        self.bottom=None
-        self.right=None
-        
-        self.calculate()
-
-
-    def calculate(self):
-        """Recalculates the box's bounding positions based on original settings"""
-        
-        if self.parent  is not None and \
-            self.base_left  is not None and \
-            self.base_left<0:
-            self.left=self.parent.right+self.base_left
-        else: 
-            self.left=self.base_left
-
-        if self.parent  is not None and \
-            self.base_right  is not None and \
-            self.base_right<0:
-            self.right=self.parent.right+self.base_right
-        else: 
-            self.right=self.base_right
-
-        if self.parent is not None and \
-            self.base_top is not None and \
-            self.base_top<0:
-            self.top=self.parent.bottom+self.base_top
-        else: 
-            self.top=self.base_top
-
-        if self.parent is not None and  \
-           self.base_bottom  is not None and  \
-           self.base_bottom<0:
-           
-            self.bottom=self.parent.bottom+self.base_bottom
-        else: 
-            self.bottom=self.base_bottom
-
-        if self.base_width is not None:
-            if self.base_left is None:
-                self.left=self.right-(self.base_width)
-
-            if self.base_right is None:
-                self.right=self.left+(self.base_width)
-
-        if self.base_height is not None:
-            if self.base_top is None:
-                self.top=self.bottom-(self.base_height)
-
-            if self.base_bottom is None:
-                self.bottom=self.top+(self.base_height)
-
-        if self.left is not None and self.right is not None:
-            self.width=self.right-self.left
-
-        if self.top is not None and self.bottom is not None:
-            self.height=self.bottom-self.top
-
-        info=self.info()
-        if self.left==None:
-            raise ValueError(f"Left cannot be none {info}")
-        if self.right==None:
-            raise ValueError(f"Right cannot be none {info}")
-        if self.top==None:
-            raise ValueError(f"Top cannot be none {info}")
-        if self.bottom==None:
-            raise ValueError(f"Bottom cannot be none {info}")
-        if  self.width==None:
-            raise ValueError(f"Width cannot be none {info}")
-        if self.height==None:
-            raise ValueError(f"Height cannot be none {info}")
-
-
-
-    def info(self):
-        info=f"\
-                Name: {self.name} \n \
-                base_left: {self.base_left}\n \
-                base_top: {self.base_top}\n \
-                base_width: {self.base_width}\n \
-                base_height: {self.base_height}\n \
-                base_bottom: {self.base_bottom}\n \
-                base_right: {self.base_right}\n \
-                parent: {self.parent}\n \
-                left: {self.left}\n \
-                top: {self.top}\n \
-                width: {self.width}\n \
-                height: {self.height}\n \
-                bottom: {self.bottom}\n \
-                right: {self.right}\n"        
-        return info
-
-    def set(self,width,height):
-        self.base_width=width
-        self.height=height
-        self.calculate()
+    def draw_box(self,double_line):
+        top=self.window.top
+        left=self.window.left
+        bottom=self.window.bottom
+        height=self.window.height
+        width=self.window.width
+        c=self.colors['BORDER']
     
+        if double_line:
+            # Approximation of double line box
+            horizontal = '═'  # Unicode U+2550
+            vertical = '║'    # Unicode U+2551
+            top_left = '╔'    # Unicode U+2554
+            top_right = '╗'   # Unicode U+2557
+            bottom_left = '╚' # Unicode U+255A
+            bottom_right = '╝'# Unicode U+255D
+        else:
+            # Approximation of single line box
+            horizontal = '─'  # Unicode U+2500
+            vertical = '│'    # Unicode U+2502
+            top_left = '┌'    # Unicode U+250C
+            top_right = '┐'   # Unicode U+2510
+            bottom_left = '└' # Unicode U+2514
+            bottom_right = '┘'# Unicode U+2518
+
+        # Draw top and bottom
+        for i in range(left + 1, left + width-1):
+            try:
+                self.buffer.addstr(top    , i, horizontal, c)
+                self.buffer.addstr(bottom , i, horizontal, c)
+            except:
+                pass
+
+        # Draw sides
+        for j in range(top + 1, top + height - 1):
+            try:
+                self.buffer.addstr(j, left, vertical,c)
+                self.buffer.addstr(j, left + width - 1, vertical, c)
+            except:
+                pass
+        try:
+            # Draw corners
+            self.buffer.addstr(top, left, top_left , c)
+            self.buffer.addstr(top, left + width - 1, top_right, c)
+            self.buffer.addstr(top + height - 1, left, bottom_left, c)
+            self.buffer.addstr(top + height - 1, left + width - 1, bottom_right, c)
+        except:
+            pass

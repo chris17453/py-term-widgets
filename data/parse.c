@@ -2,7 +2,6 @@
 #include    <stdint.h>
 #include    <stdlib.h>
 #include    <string.h>
-
 #include    "headers/stack.h"
 #include    "headers/parse.h"
 #include    "headers/expressions.h"
