@@ -35,4 +35,5 @@
 
 ## demo
 
-![py-textbox](assets/beta-demo.gif)
+![py-textbox](assets/beta-demo.gif)!
+[py-textbox](assets/chatgpt-demo.gif)
