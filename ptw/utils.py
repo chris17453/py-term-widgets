@@ -1,7 +1,49 @@
 import json
-from .base import EditBASE
+from .base import BASE
 
-class utils(EditBASE):
+import re
+
+
+def split_string_and_extract_colors( text):
+    colors = {
+                "black":0 ,
+                "blue":1 ,
+                "green":2 ,
+                "cyan":3 ,
+                "red":4 ,
+                "magenta":5 ,
+                "brown":6 ,
+                "light gray":7 ,
+                "dark gray":8 ,
+                "light blue":9 ,
+                "light green":10 ,
+                "light cyan":11 ,
+                "light red":12 ,
+                "light magenta":13 ,
+                "yellow":14 ,
+                "white":15 }
+    
+    # Splitting the string at unescaped braces and keeping the parts
+    parts = re.split(r'(?<!\\)\{.*?(?<!\\)\}', text)
+    # Extracting the commands
+    extracted_colors = re.findall(r'(?<!\\)\{(.*?)(?<!\\)\}', text)
+
+    result = []
+    for part in parts:
+        if part.strip():
+            result.append(part.strip())
+
+        if extracted_colors:
+            color = extracted_colors.pop(0)
+            if color in colors:
+                result.append(colors[color])
+            else:
+                print(f"Error: Color '{color}' not found in mapping.")
+
+    return result
+
+
+class utils(BASE):
     
     def save_to_json(self,filename, array):
         """Saves an array to a JSON file."""
@@ -27,7 +69,10 @@ class utils(EditBASE):
 
 
     def get_line(self):
-        return self.lines[self.top_line+self.cursor_y]
+        if len(self.lines)>self.top_line+self.cursor_y:
+            return self.lines[self.top_line+self.cursor_y]
+        else:
+            raise IndexError(f"Invalid line index: {self.top_line+self.cursor_y}")
 
     def get_text(self):
         try:

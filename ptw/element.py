@@ -53,49 +53,60 @@ class element:
                 self.left=l
             elif p != None:
                 self.left=p.right+l
+        elif p!=None:
+            self.left=p.left
 
         if r != None:
             if r>-1:
                 self.right=r
             elif p != None:
                 self.right=p.right+r
+        elif p!=None:
+            self.right=p.right
 
         if t != None:
             if t>-1:
                 self.top=t
             elif p:
                 self.top=p.top+t
+        elif p!=None:
+                self.top=p.top
 
         if b != None:
             if b>-1:
                 self.bottom=b
             elif p != None:
                 self.bottom=p.bottom+b
-
+        elif p!=None:
+                self.bottom=p.bottom
+                
+        # the +_ 1 is for INCLUSIVE numbers. we start at 0. and even if top and bottom are
+        # the same line which is 0 height, its actualy 1
         # if the variables are not explicitly set, we need a width and height to calcuate with
+
         if w != None:
             self.width=w
             if l == None and r != None:
-                self.left=self.right-w
+                self.left=self.right-w+1
 
             if r == None and l != None:
-                self.right=self.left+w
+                self.right=self.left+w-1
         else:
             if self.left != None and self.right!=None:
-                self.width=self.right-self.left
+                self.width=self.right-self.left+1
 
 
         if h != None:
             self.height=h
 
             if t == None and b != None:
-                self.top=self.bottom-h
+                self.top=self.bottom-h-1
 
             if b == None and t != None:
-                self.bottom=self.top+h
+                self.bottom=self.top+h-1
         else:
             if self.top != None and self.bottom!=None:
-                self.height=self.bottom-self.top
+                self.height=self.bottom-self.top+1
 
         info=self.info()
         #raise ValueError(f"Left cannot be none {info}")
@@ -134,67 +145,4 @@ class element:
         self.base_width=width
         self.height=height
         self.calculate()
-    
-
-
-#            if self.parent  is not None and \
-#            self.base_left  is not None and \
-#            self.base_left<0:
-#            self.left=self.parent.right+self.base_left
-#        else: 
-#            # self.logger.info("Element: LEFT SET")
-#            self.left=self.base_left
-#
-#        if self.parent  is not None and \
-#            self.base_right  is not None and \
-#            self.base_right<0:
-#            self.right=self.parent.right+self.base_right
-#        else: 
-#            # self.logger.info("Element: Right SET")
-#            self.right=self.base_right
-#
-#        if self.parent is not None and \
-#            self.base_top is not None and \
-#            self.base_top<0:
-#            self.top=self.parent.bottom+self.base_top
-#        else: 
-#            # self.logger.info("Element: Top SET")
-#            self.top=self.base_top
-#
-#        if self.parent is not None and  \
-#           self.base_bottom  is not None and  \
-#           self.base_bottom<0:
-#           
-#            self.bottom=self.parent.bottom+self.base_bottom
-#        else: 
-#            # self.logger.info("Element: Bottom SET")
-#            self.bottom=self.base_bottom
-#
-#        if self.base_width is not None:
-#            # self.logger.info("Element: ??? Expand")
-#
-#            if self.base_left is None and self.base_right is None:
-#                    pass
-#            else:
-#                if self.base_left:
-#                    self.left=self.right-self.base_width+1
-#
-#                if self.base_right is None:
-#                    self.right=self.left+self.base_width-1
-#
-#        if self.base_height is not None:
-#            if self.base_top is None:
-#                # self.logger.info("Element: Top Expand")
-#                self.top=self.bottom-self.base_height+1
-#
-#            if self.base_bottom is None:
-#                # self.logger.info("Element: Bottom Expand")
-#                self.bottom=self.top+self.base_height-1
-#
-#        if self.left is not None and self.right is not None:
-#            self.width=(self.right-self.left)+1
-#
-#        if self.top is not None and self.bottom is not None:
-#            self.height=(self.bottom-self.top)+1
-#
     

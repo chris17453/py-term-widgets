@@ -2,6 +2,18 @@
 from .io import io
 import curses
 
+from .utils import split_string_and_extract_colors
+
+def clear_block(buffer, left,top, width, height,color):
+    """Clear a block area on the screen."""
+    block=" "*width
+    try:
+        for y in range(top, top + height):
+    
+            buffer.addstr(y, left,block,color)
+    except curses.error:
+        pass
+
 class ui(io):
 
     def move_y(self,distance=None,position=None):
@@ -70,7 +82,7 @@ class ui(io):
                     if self.cursor_x>=self.elements['text'].width-1:
                         self.cursor_x=0
                         self.logger.warn("Calc 1")
-                        self.calcualte_page()
+                        self.calculate_page()
                         self.move_y(distance=1)
                     else:
                         self.cursor_x +=distance    
@@ -84,15 +96,7 @@ class ui(io):
         
             self.target_cursor_x=self.cursor_x
 
-    def clear_block(self, left,top, width, height,color):
-        """Clear a block area on the screen."""
-        block=" "*width
-        try:
-            for y in range(top, top + height):
-        
-                self.buffer.addstr(y, left,block,color)
-        except curses.error:
-            pass
+
     
     def draw_border(self):
         """Draw a border arround our window"""
@@ -107,7 +111,7 @@ class ui(io):
         else:
             color=self.colors['INACTIVE_TEXT']
 
-        self.clear_block(self.elements['text'].left, self.elements['text'].top, self.elements['text'].width,self.elements['text'].height,color)
+        clear_block(self.buffer,self.elements['text'].left, self.elements['text'].top, self.elements['text'].width,self.elements['text'].height,color)
         for idx in range(self.elements['text'].height):
             try:
                 line=wrapped_text[self.top_line+idx]
@@ -119,7 +123,7 @@ class ui(io):
                 self.logger.error(f"Display Text : {ex}") 
 
 
-    def calcualte_page(self):
+    def calculate_page(self):
         """Builds a precomputed array with information for every line of text. This is the main data object"""
         try:
             self.lines=[]
@@ -128,6 +132,12 @@ class ui(io):
             index=0
             for i in range(max(len(self.text),len(self.text)+self.elements['text'].height)):
                 if line<len(self.text):
+                    #calc_text=split_string_and_extract_colors(self.text[line])
+                    #text_length=0
+                    #for item in calc_text:
+                    #    if isinstance(item,str):
+                    #        text_length+=len(item)
+                    #
                     text_length=len(self.text[line])
                     text_left=0
                     if text_length==0:
@@ -174,8 +184,10 @@ class ui(io):
 
     def display_line_numbers(self):
         """Creates the line number gutter"""
-        #self.logger.warn(f"Drawing Line Numbers {self.height}")
-        for i in range(self.elements['line_numbers'].height):
+        line_range=self.elements['line_numbers'].height
+        #self.logger.warn(f"Drawing Line Numbers {line_range}")
+        
+        for i in range(line_range):
             line_num = f"{self.lines[self.top_line+i]['display']} ".rjust(4)
             try:
                 self.buffer.addstr(i + self.elements['line_numbers'].top, 

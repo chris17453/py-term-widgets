@@ -104,6 +104,7 @@ class input(ui):
             self.cursor_x=line['width']
         else:
             self.cursor_x=self.target_cursor_x
+            
 
     def handle_down(self):
         self.logger.warning("Input: KEY: Down")
@@ -152,7 +153,7 @@ class input(ui):
                 # middle
                 self.text[line_num] = text[:x_pos] + char  + text[x_pos:]
 
-            self.calcualte_page()
+            self.calculate_page()
             self.move_x(distance=1)
         except Exception as e:
             # Log the error
@@ -172,7 +173,7 @@ class input(ui):
                 self.text[number] = text[:pos - 1] 
             else:
                 self.text[number] = text[:pos - 1] + text[pos:]
-            self.calcualte_page()
+            self.calculate_page()
             cords=self.get_cords(number,pos-1)
             if cords!=None:
                 self.move_x(position=cords['x'])
@@ -190,7 +191,7 @@ class input(ui):
                     text=self.text.pop(number)
                     pos=len(self.text[number-1])
                     self.text[number-1]+=text
-                    self.calcualte_page()
+                    self.calculate_page()
                     cords=self.get_cords(number-1,pos)
                     if cords!=None:
                         self.move_x(position=cords['x'])
@@ -205,7 +206,7 @@ class input(ui):
                     if pos!=None:
                         self.remove_char(pos-1)
                         number=self.get_line_number()
-                        self.calcualte_page()
+                        self.calculate_page()
                         cords=self.get_cords(number,pos-2)
                         if cords!=None:
                             self.move_x(position=cords['x'])
@@ -262,7 +263,7 @@ class input(ui):
             new_line = text[x_pos:]
             # needs a refresh
 
-            self.calcualte_page()
+            self.calculate_page()
             self.move_y(distance=1)
             self.move_x(position=0)
             self.target_cursor_x=self.cursor_x

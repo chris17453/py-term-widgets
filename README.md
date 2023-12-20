@@ -31,4 +31,3 @@
 ## demo
 
 ![py-textbox](assets/beta-demo.gif)
-

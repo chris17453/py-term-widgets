@@ -5,7 +5,7 @@ from .element import element
 from .ui import clear_block
 
 
-class Button(BASE):
+class Menu(BASE):
 
     def __init__(self, 
                  left=None,
@@ -14,9 +14,6 @@ class Button(BASE):
                  width=None, 
                  height=None,
                  right=None,
-                 bottom=None,
-                 read_only=None,
-                 text=None,
                  callback=None):
         super().__init__(name=name,
                          width=width,
@@ -24,14 +21,13 @@ class Button(BASE):
                          left=left,
                          top=top,
                          right=right,
-                         bottom=bottom
+                         bottom=top
                          )
         
         
-        self.read_only=read_only
-        self.text=text
         self.callback=callback
         self.click=None
+        self.menu=[]
 
         
         
@@ -58,15 +54,21 @@ class Button(BASE):
                                  self.window.top,
                                  self.window.width,
                                  self.window.height,
-                                 self.colors['BUTTON'])
+                                 self.colors['MENU'])
 
-                #self.display_text()
-                # Refresh the buffer
-                # Copy the contents of the buffer to the standard screen
-                self.buffer.addstr(self.elements['text'].top,
-                                    self.elements['text'].left,
-                                    self.text,
-                                    self.colors['BUTTON'])
+                for key in self.elements:
+                    element=self.elements[key]
+                    self.buffer.addstr(element.top,
+                                        element.left,
+                                        element.name[0],
+                                        self.colors['MENU_HOTKEY'])
+
+                    self.buffer.addstr(element.top,
+                                        element.left+1,
+                                        element.name[1:],
+                                        self.colors['MENU'])
+
+                    
                 
                 self.update_screen=None
 
@@ -85,12 +87,7 @@ class Button(BASE):
         self.padding['right'] =1
         self.padding['bottom'] =0
 
-        self.elements['text']=element(name="text",
-                                        left=self.window.left+self.padding['left'],
-                                        top=self.window.top+self.padding['top'],
-                                        width=self.window.width-self.padding['left']-self.padding['right'],
-                                        height=self.window.height-self.padding['bottom']-self.padding['top'],
-                                        parent=self.window)
+  
     def handle_input(self,key):
         if key==curses.KEY_RESIZE:
               self.configure()
@@ -101,8 +98,21 @@ class Button(BASE):
              if self.callback:
                  self.callback()    
 
-    def get_click(self):
-         return self.click
-             
+    def add(self,menu):
+        menu_len=0
+        for item in self.menu:
+              menu_len+=len(item)+2
+              self.logger.info(f"{item}:{menu_len}")
+         
+        self.menu.append(menu)
+              
+        self.elements[menu]=element(name=menu,
+                                    left=self.window.left+menu_len+3,
+                                    top=self.window.top,
+                                    width=len(menu),
+                                    height=1,
+                                    parent=self.window)
+
+
 
          

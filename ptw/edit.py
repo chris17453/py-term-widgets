@@ -2,7 +2,7 @@
 import curses
 from .input import input
 from .element import element
-
+from .ui import clear_block
 
 
 class Edit(input):
@@ -58,12 +58,13 @@ class Edit(input):
                 #self.logger.warn(f"{self.window.name}: LOOP")
 
                 #id self.margin.top
-                self.calcualte_page()
-                self.clear_block(self.window.left,
-                                 self.window.top,
-                                 self.window.width,
-                                 self.window.height,
-                                 self.colors['BACKGROUND'])
+                self.calculate_page()
+                clear_block(self.buffer,
+                            self.window.left,
+                            self.window.top,
+                            self.window.width,
+                            self.window.height,
+                            self.colors['BACKGROUND'])
 
                 if self.show_border:
                     self.draw_border()
@@ -134,11 +135,31 @@ class Edit(input):
                                         height=self.window.height-self.padding['bottom']-self.padding['top'],
                                         parent=self.window)
         
-        #for e in self.elements:
-        #    self.logger.info(self.elements[e].info())
+        for e in self.elements:
+            self.logger.info(self.elements[e].info())
         #exit()
         #self.logger.info(self.window.info())
         
         
         #self.logger.warn(self.padding)
         
+    def clear(self):
+        self.text=['']
+        self.cursor_x=0
+        self.cursor_y=0
+
+    def append(self,text):
+        self.lines=[]
+        lines=text.split("\n")
+        for line in lines:
+            self.text.append(line.replace('\r',''))
+            self.logger.info(line)
+        self.cursor_x=0
+        self.cursor_y=0
+        self.calculate_page()
+        self.handle_end_document()
+        self.update_screen=True
+
+
+    def get_text(self):
+        return "\n".join(self.text)

@@ -17,16 +17,47 @@ class mouse:
         self.y=0
         self.z=0
         self.state=0
+        self.pressed1=None
+        self.pressed2=None
+        self.released1=None
+        self.released2=None
+        self.left_click=None
+        self.right_click=None
+    
     def info(self):
         info=f" \
-        id: {self.id} \
-        x: {self.x} \
-        y: {self.y} \
-        z: {self.z} \
-        state: {self.state} "
+        Mouse State \n\
+        id: {self.id} \n\
+        x:  {self.x} \n\
+        y:  {self.y} \n\
+        z:  {self.z} \n\
+        state: {self.state} \n\
+        pressed1:     {self.pressed1} \n\
+        pressed2:     {self.pressed2} \n\
+        released1:    {self.released1} \n\
+        released2:    {self.released2} \n\
+        left_click:   {self.left_click} \n\
+        right_click:  {self.right_click} \n "
         return info
 
-
+    def update(self):
+        self.id, self.x, self.y, self.z, self.state = curses.getmouse()
+        if self.state & curses.BUTTON1_PRESSED:
+            self.pressed1={'x':self.x,'y':self.y}
+            self.released1=None
+            self.left_click=None
+        if self.state & curses.BUTTON2_PRESSED:
+            self.pressed2={'x':self.x,'y':self.y}
+            self.released2=None
+            self.right_click=None
+        if self.state & curses.BUTTON1_RELEASED:
+            self.released1={'x':self.x,'y':self.y}
+            self.left_click=True
+        if self.state & curses.BUTTON2_RELEASED:
+            self.released2={'x':self.x,'y':self.y}
+            self.right_click=True
+        
+        
 
 class Manager():
     def __init__(self,stdscr):
@@ -69,6 +100,8 @@ class Manager():
         self.old_mouse=mouse()
         self.old_char=None
         self.configure()
+        self.ai="ai"
+        self.user="user"
         
         
     def configure(self):
@@ -119,13 +152,15 @@ class Manager():
         for i, (r, g, b) in enumerate(dos_colors):
             curses.init_color(i, r, g, b)
 
-        curses.init_pair(1, curses.COLOR_YELLOW, curses.COLOR_WHITE ) 
-        curses.init_pair(2, 0, 7 )  # INFO
-        curses.init_pair(4, 15, 7)  # BACKGROUND
-        curses.init_pair(5, 6, 8 ) # LINE NUMBERS
-        curses.init_pair(6, 15, 1 )  # TEXT
-        curses.init_pair(7, 15, 9 )  # TEXT
-        curses.init_pair(8, 15, 10 )  # BUTTON
+        curses.init_pair( 1, curses.COLOR_YELLOW, curses.COLOR_WHITE ) 
+        curses.init_pair( 2, 0, 7 )  # INFO
+        curses.init_pair( 4, 7, 1)  # BACKGROUND
+        curses.init_pair( 5, 14, 8 ) # LINE NUMBERS
+        curses.init_pair( 6, 15, 1 )  # Inactive TEXT
+        curses.init_pair( 7, 7, 1 )  # Active TEXT
+        curses.init_pair( 8, 0, 10 )  # BUTTON
+        curses.init_pair( 9, 0, 7 )  # Menu
+        curses.init_pair(10, 4, 7 )  # Menu HotKey
 
 
     def get_instance(self,direction):
@@ -150,6 +185,7 @@ class Manager():
 
         for instance in self.instances:
             if key==curses.KEY_MOUSE:
+                self.logger.info("Mouse")
                 mouse=True
                 instance.update_screen=True
                 refresh=True
@@ -160,16 +196,30 @@ class Manager():
                 refresh=True
 
 
+        for instance in self.instances:
+            try:
+                if instance.click==True:
+                    self.logger.info(f" Window click received: {instance.window.name}")
+            except:
+                pass
 
         #if refresh:
         #    self.buffer.clear()
 
-        if refresh:
+        if refresh or mouse:
+            #for y in range(self.window.height,self.window.height,1):
+            #    for x in range(self.window.left,self.window.right,1):
+            #        self.buffer.
+            #self.buffer.bkgd(" ",curses.color_pair(1))
+            self.buffer.bkgd(curses.ACS_CKBOARD, curses.color_pair(0))
+            self.buffer.erase()
+            self.buffer.bkgdset(' ', curses.color_pair(1))
+            
             for instance in self.instances:
-    #            if instance is not self.active_instance:
+                if instance is not self.active_instance:
                     instance.run(True)
             
-#        self.active_instance.run()
+        self.active_instance.run(True)
 
         if mouse:
             self.handle_mouse()
@@ -177,11 +227,6 @@ class Manager():
         self.buffer.noutrefresh()
         curses.doupdate()
         
-        
-    def update_mouse(self):
-        self.mouse.id, self.mouse.x, self.mouse.y, self.mouse.z, self.mouse.state = curses.getmouse()
-
-
     def add(self,instance,active=None):
         instance.buffer=self.buffer
         if active is not None:
@@ -235,7 +280,8 @@ class Manager():
         #        self.buffer.addstr(self.old_mouse.y,self.old_mouse.x,self.old_char[0],self.old_attr)
         #        self.logger.warning(f"TEXT")
             
-        self.update_mouse()
+        self.mouse.update()
+        self.handle_click()
 
         # record charcter
         #for instance in self.instances:
@@ -250,7 +296,23 @@ class Manager():
         self.buffer.addstr(self.mouse.y,self.mouse.x,"█")
         self.old_mouse=self.mouse
         
-        self.buffer.refresh()
-        curses.doupdate()
+    def handle_click(self):
+        self.logger.info(self.mouse.info())
+        if self.mouse.pressed1==True:
+            self.logger.info("Left Click")
+        if self.mouse.pressed2==True:
+            self.logger.info("Right Click")
 
+            #for instance in self.instances:
+            #    if self.mouse.x>=instance.window.left and  \
+            #    self.mouse.x<=instance.window.right and \
+            #    self.mouse.y>=instance.window.top and   \
+            #    self.mouse.y>=instance.window.bottom:
+            #        
+            #        self.instance.active()
+            
+        self.mouse.left_click=None
+        self.mouse.right_click=None
+                
+            
 

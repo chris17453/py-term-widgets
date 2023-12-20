@@ -10,7 +10,7 @@ logging.basicConfig(level=logging.DEBUG,
                     filename='termy.log')  # Specify the log file name
 
 
-class EditBASE:
+class BASE:
     def __init__(self, 
                  name=None,
                  width=None, 
@@ -30,16 +30,17 @@ class EditBASE:
         self.elements={}
         # inner window positing
         self.name=name
+        # element of this window
         self.window=None
+        # element parent not base
         self.parent=None
-        self.window_x=5
-        self.window_y=1
         self.window_width=width
         self.window_height=height
         self.width=self.window_width
         self.height=self.window_height
         self.active=None
         self.read_only=None
+
         # cursor
         self.cursor_x = 0
         self.cursor_y = 0
@@ -65,6 +66,8 @@ class EditBASE:
         self.colors['ACTIVE_TEXT']= curses.color_pair(6)
         self.colors['INACTIVE_TEXT']= curses.color_pair(7)
         self.colors['BUTTON']= curses.color_pair(8)
+        self.colors['MENU']= curses.color_pair(9)
+        self.colors['MENU_HOTKEY']= curses.color_pair(10)
     
     def info(self):
         info="Class Variables\n"
