@@ -19,6 +19,11 @@
 - line numbers which span split lines
 - status bar with line cursor, line number, position and lenght information
 
+## Menu
+
+## Button
+
+
 ## Graph
 
 - left to right
